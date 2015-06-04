@@ -10,10 +10,50 @@
 
 `timescale 1ns / 1ps
 
-module I2CslaveWith8bitsIO(SDA, SCL, IOout);
+module I2CslaveWith8bitsIO(SDA, SCL, IOout, clk, laser_trigger, pmt1, pmt2, end_sim);
 inout SDA;
 input SCL;
 output [7:0] IOout;
+/******************
+******************/
+input clk;
+input laser_trigger;
+input pmt1;
+input pmt2;
+input end_sim;
+
+/*************************************************************************************
+*************************************************************************************/
+
+reg [15:0] upper_bound, lower_bound;
+// Counters
+reg [15:0] ungated1, gated1, ungated2, gated2, ungated3, gated3;
+wire [15:0] temp_ungated1, temp_gated1, temp_ungated2, temp_gated2, temp_ungated3, temp_gated3;
+assign temp_ungated1 = ungated1;
+assign temp_gated1 = gated1;
+assign temp_ungated2 = ungated2;
+assign temp_gated2 = gated2;
+assign temp_ungated3 = ungated3;
+assign temp_gated3 = gated3;
+
+// Time
+reg [15:0] time_ctr;
+
+// Fast clock - 4.9 ns
+wire clk_fast;
+
+DCM_SP #(
+      .CLKFX_DIVIDE(1),   // Can be any integer from 1 to 32
+      .CLKFX_MULTIPLY(17) // Can be any integer from 2 to 32
+   ) DCM_SP_inst (
+      .CLKFX(clk_fast),   // DCM CLK synthesis out (M/D)
+      .CLKIN(clk),   // Clock input (from IBUFG, BUFG or DCM)
+      .RST(0)        // DCM asynchronous reset input
+   );
+
+/*************************************************************************************
+*************************************************************************************/
+
 
 // The 7-bits address that we want for our I2C slave
 parameter I2C_ADR = 7'h03;
@@ -52,6 +92,13 @@ wire bit_ACK = bitcnt[3];  // the ACK bit is the 9th bit sent
 //reg data_phase;
 reg data_phase = 1'b0; //for simulation MBL
 
+// Flag for second byte of data (0 for 1st byte, 1 for 2nd byte)
+reg byte_flag = 1'b0;
+
+// Read and write flags
+reg [2:0] read_flag = 3'b000;
+reg [2:0] write_flag = 3'b000;
+
 always @(negedge SCL or negedge incycle)
 if(~incycle)
 begin
@@ -76,13 +123,9 @@ reg adr_match = 1'b0, op_read = 1'b0 , got_ACK = 1'b0; //for simulation MBL
 //reg SDAr;
 reg SDAr = 1'b0; //for simulation MBL
 always @(posedge SCL) SDAr<=SDA;  // sample SDA on posedge since the I2C spec specifies as low as 0s hold-time on negedge
-//reg [7:0] mem; 
-reg [7:0] mem = 8'hFF; //for initial read access to slave and simulation MBL
+reg [7:0] mem = 8'h00; 
+//reg [7:0] mem = 8'hFF; //for initial read access to slave and simulation MBL
 wire op_write = ~op_read;
-
-// ********************************************************
-// For read????????????????????????????????????????????????
-// ********************************************************
 
 always @(negedge SCL or negedge incycle)
 if(~incycle)
@@ -104,9 +147,17 @@ begin
     if(bit_ACK) got_ACK <= ~SDAr;  // we monitor the ACK to be able to free the bus when the master doesn't ACK during a read operation
 
     if(adr_match & bit_DATA & data_phase & op_write) mem[bitcnt] <= SDAr;  // memory write
+	 //**********************
+	 if(adr_match & bit_DATA & data_phase & op_write & write_flag==0) upper_bound[bitcnt] <= SDAr;
+	 if(adr_match & bit_DATA & data_phase & op_write & write_flag==0 & bitcnt==0) write_flag<=1;
+	 if(adr_match & bit_DATA & data_phase & op_write & write_flag==1) upper_bound[bitcnt+8] <= SDAr;
+	 if(adr_match & bit_DATA & data_phase & op_write & write_flag==1 & bitcnt==0) write_flag<=0;
+	 //**********************
 	 
-	 if(adr_match & bit_DATA & data_phase & op_read & bitcnt == 7) mem <= mem+1;
+	 if(adr_match & bit_DATA & data_phase & ~op_write & !byte_flag) mem <= 8'b11111110;
+	 if(adr_match & bit_DATA & data_phase & ~op_write & byte_flag) mem <= 8'b11111100;
 	
+	 if(adr_match & bit_DATA & data_phase & ~op_write & bitcnt==0) byte_flag <= ~byte_flag;
 end
 
 // and drive the SDA line when necessary.
@@ -116,5 +167,53 @@ wire SDA_assert_ACK = adr_match & bit_ACK & (adr_phase | op_write);
 wire SDA_low = SDA_assert_low | SDA_assert_ACK;
 assign SDA = SDA_low ? 1'b0 : 1'bz;
 
-assign IOout = mem;
+//assign IOout = mem;
+assign IOout = upper_bound[15:8];
+
+/***********************************************************************************************
+***********************************************************************************************/
+
+always @(posedge clk_fast) begin
+	if(end_sim) begin
+		ungated1 <= ungated1;
+		gated1 <= gated1;
+		ungated2 <= ungated2;
+		gated2 <= gated2;
+		ungated3 <= ungated3;
+		gated3 <= gated3;
+		time_ctr <= time_ctr;
+	end
+	else if(laser_trigger) begin
+		ungated1 <= 0;
+		gated1 <= 0;
+		ungated2 <= 0;
+		gated2 <= 0;
+		ungated3 <= 0;
+		gated3 <= 0;
+		time_ctr <= 0;
+	end
+	else begin
+		if(pmt1) begin
+			if((time_ctr >= lower_bound) && (time_ctr <= upper_bound)) begin
+				gated1 <= gated1 + 1;
+			end
+			ungated1 <= ungated1 + 1;
+		end
+		if(pmt2) begin
+			if((time_ctr >= lower_bound) && (time_ctr <= upper_bound)) begin
+				gated2 <= gated2 + 1;
+				gated3 <= gated3 + 1;
+			end
+			ungated2 <= ungated2 + 1;
+			ungated3 <= ungated3 + 1;
+		end
+	end
+	if(time_ctr >= 0) begin
+		time_ctr <= time_ctr + 5;
+	end
+end
+
+/***********************************************************************************************
+***********************************************************************************************/
+
 endmodule
