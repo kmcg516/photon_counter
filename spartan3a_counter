@@ -1,0 +1,96 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date:    14:36:35 06/03/2015 
+// Design Name: 
+// Module Name:    counter 
+// Project Name: 
+// Target Devices: 
+// Tool versions: 
+// Description: 
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module counter(
+    input clk,
+    input laser_trigger,
+    input pmt1,
+    input pmt2,
+	 input end_sim,
+	 input [15:0] lower_bound,
+	 input [15:0] upper_bound,
+    output reg [15:0] out
+    );
+
+// Counters
+reg [15:0] ungated1, gated1, ungated2, gated2, ungated3, gated3;
+wire [15:0] temp_ungated1, temp_gated1, temp_ungated2, temp_gated2, temp_ungated3, temp_gated3;
+assign temp_ungated1 = ungated1;
+assign temp_gated1 = gated1;
+assign temp_ungated2 = ungated2;
+assign temp_gated2 = gated2;
+assign temp_ungated3 = ungated3;
+assign temp_gated3 = gated3;
+
+// Time
+reg [15:0] time_ctr;
+
+// Fast clock - 4.9 ns
+wire clk_fast;
+
+DCM_SP #(
+      .CLKFX_DIVIDE(1),   // Can be any integer from 1 to 32
+      .CLKFX_MULTIPLY(17) // Can be any integer from 2 to 32
+   ) DCM_SP_inst (
+      .CLKFX(clk_fast),   // DCM CLK synthesis out (M/D)
+      .CLKIN(clk),   // Clock input (from IBUFG, BUFG or DCM)
+      .RST(0)        // DCM asynchronous reset input
+   );
+
+always @(posedge clk_fast) begin
+	if(end_sim) begin
+		ungated1 <= ungated1;
+		gated1 <= gated1;
+		ungated2 <= ungated2;
+		gated2 <= gated2;
+		ungated3 <= ungated3;
+		gated3 <= gated3;
+		time_ctr <= time_ctr;
+	end
+	else if(laser_trigger) begin
+		ungated1 <= 0;
+		gated1 <= 0;
+		ungated2 <= 0;
+		gated2 <= 0;
+		ungated3 <= 0;
+		gated3 <= 0;
+		time_ctr <= 0;
+	end
+	else begin
+		if(pmt1) begin
+			if((time_ctr >= lower_bound) && (time_ctr <= upper_bound)) begin
+				gated1 <= gated1 + 1;
+			end
+			ungated1 <= ungated1 + 1;
+		end
+		if(pmt2) begin
+			if((time_ctr >= lower_bound) && (time_ctr <= upper_bound)) begin
+				gated2 <= gated2 + 1;
+				gated3 <= gated3 + 1;
+			end
+			ungated2 <= ungated2 + 1;
+			ungated3 <= ungated3 + 1;
+		end
+	end
+	if(time_ctr >= 0) begin
+		time_ctr <= time_ctr + 5;
+	end
+end
+endmodule
