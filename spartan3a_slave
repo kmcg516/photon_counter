@@ -52,6 +52,9 @@ wire bit_ACK = bitcnt[3];  // the ACK bit is the 9th bit sent
 //reg data_phase;
 reg data_phase = 1'b0; //for simulation MBL
 
+// Flag for second byte of data (0 for 1st byte, 1 for 2nd byte)
+reg byte_flag = 1'b0;
+
 always @(negedge SCL or negedge incycle)
 if(~incycle)
 begin
@@ -76,8 +79,8 @@ reg adr_match = 1'b0, op_read = 1'b0 , got_ACK = 1'b0; //for simulation MBL
 //reg SDAr;
 reg SDAr = 1'b0; //for simulation MBL
 always @(posedge SCL) SDAr<=SDA;  // sample SDA on posedge since the I2C spec specifies as low as 0s hold-time on negedge
-//reg [7:0] mem; 
-reg [7:0] mem = 8'hFF; //for initial read access to slave and simulation MBL
+reg [7:0] mem; 
+//reg [7:0] mem = 8'hFF; //for initial read access to slave and simulation MBL
 wire op_write = ~op_read;
 
 // ********************************************************
@@ -105,8 +108,13 @@ begin
 
     if(adr_match & bit_DATA & data_phase & op_write) mem[bitcnt] <= SDAr;  // memory write
 	 
-	 if(adr_match & bit_DATA & data_phase & op_read & bitcnt == 7) mem <= mem+1;
+//	 if(adr_match & bit_DATA & data_phase & op_read) mem <= 123;
+	 
+	 //if(adr_match & bit_DATA & data_phase & (op_write & bitcnt==0) & !byte_flag) mem[7] <= 1'b1;
+	 if(adr_match & /*bit_DATA &*/ data_phase & op_read & !byte_flag) mem <= 8'b11111110;
+	 if(adr_match & /*bit_DATA &*/ data_phase & op_read & byte_flag) mem <= 8'b11111100;
 	
+	 if(adr_match & /*bit_DATA &*/ data_phase & op_read & bitcnt==0) byte_flag <= ~byte_flag;
 end
 
 // and drive the SDA line when necessary.
@@ -118,3 +126,4 @@ assign SDA = SDA_low ? 1'b0 : 1'bz;
 
 assign IOout = mem;
 endmodule
+
