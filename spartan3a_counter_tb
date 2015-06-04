@@ -1,0 +1,83 @@
+`timescale 1ns / 1ps
+
+////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer:
+//
+// Create Date:   15:19:38 06/03/2015
+// Design Name:   counter
+// Module Name:   C:/Xilinx/I2Cslave_Mod1/counter_tb.v
+// Project Name:  I2Cslave_Mod1
+// Target Device:  
+// Tool versions:  
+// Description: 
+//
+// Verilog Test Fixture created by ISE for module: counter
+//
+// Dependencies:
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+////////////////////////////////////////////////////////////////////////////////
+
+module counter_tb;
+
+	// Inputs
+	reg clk;
+	reg laser_trigger;
+	reg pmt1;
+	reg pmt2;
+	reg end_sim;
+	reg [15:0] lower_bound;
+	reg [15:0] upper_bound;
+
+	// Outputs
+	wire [15:0] out;
+	
+	// Instantiate the Unit Under Test (UUT)
+	counter uut (
+		.clk(clk), 
+		.laser_trigger(laser_trigger), 
+		.pmt1(pmt1), 
+		.pmt2(pmt2), 
+		.end_sim(end_sim),
+		.lower_bound(lower_bound),
+		.upper_bound(upper_bound),
+		.out(out)
+	);
+	
+	parameter clock_period = 83.3;
+	always
+		#(clock_period/2) clk = ~clk;
+		
+	initial begin
+		// Initialize Inputs
+		clk = 0;
+		laser_trigger = 0;
+		pmt1 = 0;
+		pmt2 = 0;
+		end_sim = 0;
+		lower_bound = 0;
+		upper_bound = 0;
+		
+		// Wait 100 ns for global reset to finish
+		#800;
+        
+		// Add stimulus here
+		#5;
+		laser_trigger = 1;
+		#5;
+		laser_trigger = 0;
+		#5;
+		pmt1 = 1;
+		#30;
+		pmt2 = 1;
+		
+		#100
+		end_sim = 1;
+	end
+      
+endmodule
+
