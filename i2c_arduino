@@ -1,0 +1,44 @@
+#include <Wire.h>
+
+void setup()
+{
+  Wire.begin();        // join i2c bus (address optional for master)
+  Serial.begin(9600);  // start serial for output
+  while (!Serial) {}
+  Serial.print("programns");
+  Serial.println();
+}
+
+void loop()
+{
+  byte c;
+  byte i;
+  
+  i = 0;
+  c = 32;
+  
+  while (true) {
+    Wire.beginTransmission(3);
+    Wire.write(i);
+    Wire.endTransmission();
+    delay(1);
+    Wire.requestFrom(3, 1);    // request 6 bytes from slave device #2
+    while(!Wire.available()) {}
+    c = Wire.read(); // receive a byte as character
+    Serial.print("Write: ");
+    Serial.print(i);         // print the characterc
+    Serial.print("; Read: ");
+    Serial.print(c);         // print the characterc
+    Serial.println();
+    i = i + 1;
+    if (i == 255) {
+      Serial.print("Presskey to repeat");
+      Serial.println();
+       while (!Serial.available()) {}
+      while (Serial.available()) 
+        Serial.read();
+      break;
+    }
+    delay(1);
+  }
+}
