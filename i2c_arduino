@@ -4,31 +4,47 @@ void setup()
 {
   Wire.begin();        // join i2c bus (address optional for master)
   Serial.begin(9600);  // start serial for output
-  while (!Serial) {}
+  while (!Serial) {}   // make sure dtr is ready
   Serial.print("programns");
   Serial.println();
+  
+  Wire.beginTransmission(3);  // write data to address 3
+  Wire.write(2);              // value 2
+  Wire.endTransmission();
+  
+  delay(1);                  // 1 ms
+  
+  Wire.requestFrom(3, 1);    // dummy read (to avoid off by 1 read)
+  while(!Wire.available()) {}
+  Wire.read();
+  
+  delay(4000);              // delay long enough to see with LEDs
 }
 
 void loop()
 {
   byte c;
+  byte d;
   byte i;
   
   i = 0;
   c = 32;
+  d = 33;
   
   while (true) {
-    Wire.beginTransmission(3);
-    Wire.write(i);
-    Wire.endTransmission();
-    delay(1);
-    Wire.requestFrom(3, 1);    // request 6 bytes from slave device #2
+    Wire.requestFrom(3, 2);    // request 2 bytes from slave device #2
     while(!Wire.available()) {}
     c = Wire.read(); // receive a byte as character
+    // Second byte
+    while(!Wire.available()) {}
+    d = Wire.read();
+    
     Serial.print("Write: ");
-    Serial.print(i);         // print the characterc
-    Serial.print("; Read: ");
-    Serial.print(c);         // print the characterc
+    Serial.print(i);         // print the character i
+    Serial.print("; Read1: ");
+    Serial.print(c);         // print the character c
+    Serial.print("; Read2: ");
+    Serial.print(d);         // print the character d
     Serial.println();
     i = i + 1;
     if (i == 255) {
