@@ -1,0 +1,13 @@
+
+# PlanAhead Generated physical constraints 
+
+NET "SCL" LOC = P44;
+NET "SDA" LOC = P37;
+NET "IOout[0]" LOC = P73;
+NET "IOout[1]" LOC = P72;
+NET "IOout[2]" LOC = P62;
+NET "IOout[3]" LOC = P61;
+NET "IOout[4]" LOC = P57;
+NET "IOout[5]" LOC = P56;
+NET "IOout[6]" LOC = P52;
+NET "IOout[7]" LOC = P50;
