@@ -1,44 +1,154 @@
 #include <Wire.h>
 
+// Declare digital pins
+int laser_trigger = 7;
+int pmt1 = 8;
+int pmt2 = 12;
+int end_sim = 13;
+
+int c1 = 2;
+int c2 = 4;
+int c3 = 5;
+
 void setup()
 {
+  // Digital pins
+  pinMode(laser_trigger, OUTPUT);
+  pinMode(pmt1, OUTPUT);
+  pinMode(pmt2, OUTPUT);
+  pinMode(end_sim, OUTPUT);
+  
+  digitalWrite(c1, LOW);
+  digitalWrite(c2, LOW);
+  digitalWrite(c3, LOW);
+  
+  digitalWrite(pmt1, HIGH);
+  digitalWrite(pmt2, HIGH);
+  digitalWrite(end_sim, LOW);
+  digitalWrite(laser_trigger, HIGH);
+  delay(1);
+  digitalWrite(laser_trigger, LOW);
+  delay(1);
+  
+  // Setup
   Wire.begin();        // join i2c bus (address optional for master)
   Serial.begin(9600);  // start serial for output
-  while (!Serial) {}
+  while (!Serial) {}   // make sure dtr is ready
   Serial.print("programns");
   Serial.println();
+  
+  // Frist write goes to upper_bound[7:0]
+  Wire.beginTransmission(3);  // write data to address 3
+  Wire.write(88);              // value
+  Wire.endTransmission();
+  delay(1);
+  // Second write goes to upper_bound[15:8]
+  Wire.beginTransmission(3);  // write data to address 3
+  Wire.write(2);              // value 
+  Wire.endTransmission();
+  delay(1);
+  // Third write goes to lower_bound[7:0]
+  Wire.beginTransmission(3);  // write data to address 3
+  Wire.write(0);              // value 
+  Wire.endTransmission();
+  delay(1);
+  // Fourth write goes to lower_bound[15:8]
+  Wire.beginTransmission(3);  // write data to address 3
+  Wire.write(0);              // value 
+  Wire.endTransmission();
+  
+  delay(1);                  // 1 ms
+  
+//  Wire.requestFrom(3, 1);    // dummy read (to avoid off by 1 read)
+//  while(!Wire.available()) {}
+//  Wire.read();
+  
+  delay(5000);              // delay long enough to see with LEDs
 }
 
 void loop()
 {
   byte c;
+  byte d;
   byte i;
   
   i = 0;
   c = 32;
+  d = 33;
   
   while (true) {
-    Wire.beginTransmission(3);
-    Wire.write(i);
-    Wire.endTransmission();
+    digitalWrite(c1, HIGH);
     delay(1);
-    Wire.requestFrom(3, 1);    // request 6 bytes from slave device #2
+    Wire.requestFrom(3, 2);    // request 2 bytes from slave device #2
     while(!Wire.available()) {}
     c = Wire.read(); // receive a byte as character
+    // Second byte
+    while(!Wire.available()) {}
+    d = Wire.read();
+    digitalWrite(c1, LOW);
     Serial.print("Write: ");
-    Serial.print(i);         // print the characterc
-    Serial.print("; Read: ");
-    Serial.print(c);         // print the characterc
+    Serial.print(1);         // print the character 1
+    Serial.print("; Read1: ");
+    Serial.print(c);         // print the character c
+    Serial.print("; Read2: ");
+    Serial.print(d);         // print the character d
     Serial.println();
-    i = i + 1;
-    if (i == 255) {
-      Serial.print("Presskey to repeat");
-      Serial.println();
-       while (!Serial.available()) {}
-      while (Serial.available()) 
-        Serial.read();
-      break;
-    }
+    delay(1000);
+    
+    digitalWrite(c2, HIGH);
     delay(1);
+    Wire.requestFrom(3, 2);    // request 2 bytes from slave device #2
+    while(!Wire.available()) {}
+    c = Wire.read(); // receive a byte as character
+    // Second byte
+    while(!Wire.available()) {}
+    d = Wire.read();
+    digitalWrite(c2, LOW);
+    Serial.print("Write: ");
+    Serial.print(2);         // print the character i
+    Serial.print("; Read1: ");
+    Serial.print(c);         // print the character c
+    Serial.print("; Read2: ");
+    Serial.print(d);         // print the character d
+    Serial.println();
+    delay(1000);
+    
+    digitalWrite(c3, HIGH);
+    delay(1);
+    Wire.requestFrom(3, 2);    // request 2 bytes from slave device #2
+    while(!Wire.available()) {}
+    c = Wire.read(); // receive a byte as character
+    // Second byte
+    while(!Wire.available()) {}
+    d = Wire.read();
+    digitalWrite(c3, LOW);
+    Serial.print("Write: ");
+    Serial.print(3);         // print the character i
+    Serial.print("; Read1: ");
+    Serial.print(c);         // print the character c
+    Serial.print("; Read2: ");
+    Serial.print(d);         // print the character d
+    Serial.println();
+    delay(1000);
+    
+      //while(1) {}
+    
+//    Serial.print("Write: ");
+//    Serial.print(i);         // print the character i
+//    Serial.print("; Read1: ");
+//    Serial.print(c);         // print the character c
+//    Serial.print("; Read2: ");
+//    Serial.print(d);         // print the character d
+//    Serial.println();
+//    i = i + 1;
+//    if (i == 255) {
+//      Serial.print("Presskey to repeat");
+//      Serial.println();
+//       while (!Serial.available()) {}
+//      while (Serial.available()) 
+//        Serial.read();
+//      break;
+//    }
+//    delay(1);
   }
 }
